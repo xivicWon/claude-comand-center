@@ -1,0 +1,384 @@
+# Issue Handler Skill - Jira-like Issue Processing
+# This skill automatically processes issues based on their type and executes appropriate actions
+
+name: issue-handler
+version: 1.0.0
+description: "Jira 스타일 이슈 자동 처리 스킬 - 이슈 타입에 따라 적절한 작업을 자동으로 수행"
+author: "Command Center Team"
+tags: ["issue-management", "automation", "jira-like", "workflow"]
+
+# 스킬 활성화 조건
+activation:
+  triggers:
+    - command: "/issue"
+    - command: "/handle-issue"
+    - pattern: "^(CMD|ISSUE|TASK|BUG|FEATURE)-\\d+"  # Issue ID 패턴
+
+# 입력 파라미터 정의
+inputs:
+  issue_code:
+    type: string
+    required: true
+    description: "이슈 코드 (예: CMD-001, BUG-123)"
+    pattern: "^[A-Z]+-\\d+$"
+
+  issue_data:
+    type: object
+    required: false
+    description: "이슈 상세 정보"
+    properties:
+      title:
+        type: string
+        maxLength: 200
+      description:
+        type: string
+        format: markdown
+      type:
+        type: string
+        enum: ["TASK", "BUG", "FEATURE", "HOTFIX", "IMPROVEMENT", "EPIC", "STORY", "SUB-TASK"]
+      priority:
+        type: string
+        enum: ["CRITICAL", "HIGH", "MEDIUM", "LOW", "TRIVIAL"]
+        default: "MEDIUM"
+      status:
+        type: string
+        enum: ["TODO", "IN_PROGRESS", "REVIEW", "TESTING", "DONE", "BLOCKED"]
+        default: "TODO"
+      assignee:
+        type: string
+      labels:
+        type: array
+        items:
+          type: string
+      attachments:
+        type: array
+        items:
+          type: string
+      context_files:
+        type: array
+        items:
+          type: string
+          description: "관련 소스 코드 파일 경로"
+      acceptance_criteria:
+        type: array
+        items:
+          type: string
+      estimated_hours:
+        type: number
+        minimum: 0
+
+# 출력 정의
+outputs:
+  execution_result:
+    type: object
+    properties:
+      issue_id:
+        type: string
+      status:
+        type: string
+        enum: ["success", "failed", "partial"]
+      actions_taken:
+        type: array
+        items:
+          type: object
+          properties:
+            action: string
+            result: string
+            timestamp: string
+      artifacts:
+        type: array
+        description: "생성된 파일들"
+        items:
+          type: string
+      next_steps:
+        type: array
+        description: "다음 단계 제안"
+        items:
+          type: string
+      metrics:
+        type: object
+        properties:
+          execution_time: number
+          tokens_used: number
+          files_modified: number
+          tests_run: number
+          coverage: number
+
+# 이슈 타입별 워크플로우 정의
+workflows:
+  TASK:
+    description: "일반 작업 처리"
+    steps:
+      - id: analyze_task
+        action: analyze_requirements
+        description: "작업 요구사항 분석"
+
+      - id: create_plan
+        action: generate_implementation_plan
+        description: "구현 계획 생성"
+
+      - id: implement
+        action: execute_task
+        description: "작업 수행"
+
+      - id: verify
+        action: verify_completion
+        description: "완료 조건 확인"
+
+  BUG:
+    description: "버그 수정 워크플로우"
+    steps:
+      - id: reproduce
+        action: reproduce_bug
+        description: "버그 재현 시도"
+        error_handling: continue_on_failure
+
+      - id: analyze_root_cause
+        action: find_root_cause
+        description: "근본 원인 분석"
+        tools: ["debugger", "log-analyzer"]
+
+      - id: create_fix
+        action: implement_fix
+        description: "버그 수정 구현"
+        validation: true
+
+      - id: write_test
+        action: create_regression_test
+        description: "회귀 테스트 작성"
+        required: true
+
+      - id: verify_fix
+        action: run_tests
+        description: "수정 사항 검증"
+        coverage_threshold: 80
+
+  FEATURE:
+    description: "새 기능 개발 워크플로우"
+    steps:
+      - id: design
+        action: create_design_doc
+        description: "설계 문서 작성"
+        template: "feature_design_template"
+
+      - id: breakdown
+        action: create_subtasks
+        description: "하위 작업으로 분해"
+        max_subtasks: 10
+
+      - id: implement_core
+        action: implement_feature
+        description: "핵심 기능 구현"
+        tdd: true
+
+      - id: implement_tests
+        action: write_tests
+        description: "테스트 작성"
+        types: ["unit", "integration", "e2e"]
+
+      - id: document
+        action: generate_documentation
+        description: "문서화"
+        formats: ["markdown", "jsdoc", "openapi"]
+
+      - id: review_checklist
+        action: validate_checklist
+        description: "체크리스트 검증"
+        checklist:
+          - "Code follows style guide"
+          - "Tests pass with >80% coverage"
+          - "Documentation updated"
+          - "No security vulnerabilities"
+          - "Performance benchmarks pass"
+
+  HOTFIX:
+    description: "긴급 수정 워크플로우"
+    priority: CRITICAL
+    steps:
+      - id: immediate_analysis
+        action: quick_analysis
+        description: "즉시 분석"
+        timeout: 60
+
+      - id: quick_fix
+        action: apply_hotfix
+        description: "긴급 패치 적용"
+        skip_tests: false
+
+      - id: minimal_test
+        action: run_critical_tests
+        description: "핵심 테스트만 실행"
+
+      - id: deploy_preparation
+        action: prepare_deployment
+        description: "배포 준비"
+        rollback_plan: true
+
+  IMPROVEMENT:
+    description: "코드 개선 워크플로우"
+    steps:
+      - id: analyze_current
+        action: analyze_code_quality
+        description: "현재 코드 품질 분석"
+        metrics: ["complexity", "duplication", "coverage", "debt"]
+
+      - id: identify_improvements
+        action: suggest_improvements
+        description: "개선 사항 식별"
+        categories: ["performance", "readability", "maintainability", "security"]
+
+      - id: refactor
+        action: apply_refactoring
+        description: "리팩토링 적용"
+        preserve_behavior: true
+
+      - id: benchmark
+        action: run_benchmarks
+        description: "성능 벤치마크"
+        compare_before_after: true
+
+# 액션 정의
+actions:
+  analyze_requirements:
+    description: "요구사항 분석"
+    prompt: |
+      이슈 내용을 분석하여 다음을 파악하세요:
+      1. 핵심 요구사항
+      2. 제약 조건
+      3. 성공 기준
+      4. 필요한 리소스
+
+  reproduce_bug:
+    description: "버그 재현"
+    prompt: |
+      버그를 재현하기 위해:
+      1. 재현 단계 작성
+      2. 테스트 케이스 생성
+      3. 실제 vs 예상 결과 비교
+
+  find_root_cause:
+    description: "근본 원인 찾기"
+    prompt: |
+      버그의 근본 원인을 찾기 위해:
+      1. 스택 트레이스 분석
+      2. 관련 코드 검토
+      3. 최근 변경사항 확인
+      4. 데이터 흐름 추적
+
+  implement_fix:
+    description: "수정 구현"
+    prompt: |
+      버그를 수정하기 위해:
+      1. 최소한의 변경으로 수정
+      2. 사이드 이펙트 확인
+      3. 엣지 케이스 처리
+
+  create_regression_test:
+    description: "회귀 테스트 작성"
+    prompt: |
+      버그가 재발하지 않도록:
+      1. 버그를 재현하는 테스트 작성
+      2. 수정 후 통과 확인
+      3. 관련 시나리오 테스트 추가
+
+  implement_feature:
+    description: "기능 구현"
+    prompt: |
+      새 기능을 구현하기 위해:
+      1. 인터페이스 정의
+      2. 핵심 로직 구현
+      3. 에러 처리 추가
+      4. 로깅 및 모니터링 추가
+
+  generate_documentation:
+    description: "문서 생성"
+    prompt: |
+      다음 문서를 생성:
+      1. API 문서
+      2. 사용자 가이드
+      3. 기술 문서
+      4. 변경 로그
+
+# 실행 규칙
+rules:
+  - name: "자동 우선순위 조정"
+    condition: "issue.type == 'HOTFIX'"
+    action: "set_priority('CRITICAL')"
+
+  - name: "버그 라벨 추가"
+    condition: "issue.type == 'BUG'"
+    action: "add_label('needs-fix')"
+
+  - name: "큰 기능 분해"
+    condition: "issue.type == 'FEATURE' && estimated_hours > 40"
+    action: "create_epic()"
+
+  - name: "보안 검사 필수"
+    condition: "has_label('security')"
+    action: "require_security_review()"
+
+# 통합 설정
+integrations:
+  git:
+    enabled: true
+    auto_branch: true
+    branch_naming: "{type}/{issue_code}-{title_slug}"
+    commit_template: "[{issue_code}] {message}"
+
+  claude_code:
+    enabled: true
+    model: "claude-3-opus"
+    max_tokens: 8000
+    temperature: 0.3
+
+  testing:
+    enabled: true
+    frameworks: ["jest", "pytest", "go-test"]
+    coverage_threshold: 80
+
+  notification:
+    enabled: true
+    channels: ["slack", "email"]
+    events: ["started", "completed", "failed", "blocked"]
+
+# 메트릭 수집
+metrics:
+  track:
+    - execution_time
+    - tokens_used
+    - files_modified
+    - lines_changed
+    - tests_added
+    - coverage_delta
+    - complexity_delta
+
+  report_frequency: "per_execution"
+  aggregation: "daily"
+
+# 에러 처리
+error_handling:
+  max_retries: 3
+  retry_delay: 5000  # ms
+  fallback_strategy: "manual_intervention"
+
+  error_types:
+    timeout:
+      action: "retry_with_extended_timeout"
+
+    insufficient_context:
+      action: "request_more_information"
+
+    test_failure:
+      action: "analyze_and_fix"
+
+    merge_conflict:
+      action: "notify_user"
+
+# 캐싱 설정
+cache:
+  enabled: true
+  ttl: 3600  # 1시간
+  invalidate_on:
+    - file_change
+    - dependency_update
+    - configuration_change

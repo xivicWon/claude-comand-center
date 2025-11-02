@@ -1,0 +1,110 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// User model
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      String   @default("developer")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  createdIssues Issue[]     @relation("CreatedIssues")
+  assignedIssues Issue[]    @relation("AssignedIssues")
+  executions    Execution[]
+  projects      Project[]
+}
+
+// Project model
+model Project {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  directory   String   // Server directory path
+  fileTree    String?  // JSON stored as string
+  gitRepo     String?
+  gitBranch   String?  @default("main")
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  ownerId     String
+  owner       User     @relation(fields: [ownerId], references: [id])
+  issues      Issue[]
+}
+
+// Issue model
+model Issue {
+  id               String   @id @default(uuid())
+  code             String   @unique
+  title            String
+  description      String
+  type             String   // TASK, BUG, FEATURE, HOTFIX, IMPROVEMENT
+  priority         String   // CRITICAL, HIGH, MEDIUM, LOW
+  status           String   @default("TODO") // TODO, IN_PROGRESS, REVIEW, TESTING, DONE, BLOCKED
+  labels           String   // JSON array stored as string
+  attachments      String?  // JSON array stored as string
+  contextFiles     String?  // JSON array stored as string
+  acceptanceCriteria String? // JSON array stored as string
+  estimatedHours   Float?
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relations
+  projectId        String?
+  project          Project?  @relation(fields: [projectId], references: [id])
+  createdBy        String
+  creator          User      @relation("CreatedIssues", fields: [createdBy], references: [id])
+  assigneeId       String?
+  assignee         User?     @relation("AssignedIssues", fields: [assigneeId], references: [id])
+  executions       Execution[]
+}
+
+// Execution model for Claude commands
+model Execution {
+  id          String   @id @default(uuid())
+  jobId       String   @unique
+  status      String   // pending, running, completed, failed
+  progress    Int      @default(0)
+  logs        String   // JSON array stored as string
+  result      String?  // JSON stored as string
+  error       String?
+
+  tokensUsed  Int?
+  filesModified String? // JSON array stored as string
+
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+
+  // Relations
+  issueId     String
+  issue       Issue    @relation(fields: [issueId], references: [id])
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+}
+
+// Model for storing available Claude models
+model ClaudeModel {
+  id             String   @id @default(uuid())
+  name           String   @unique
+  displayName    String
+  contextWindow  Int
+  costPer1kTokens Float
+  enabled        Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
