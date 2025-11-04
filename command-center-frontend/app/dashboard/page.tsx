@@ -1,8 +1,12 @@
 'use client'
 
 import Link from 'next/link'
+import { useProjects } from '@/hooks/useProjects'
 
 export default function DashboardPage() {
+  // React Query가 서버 상태 관리
+  const { data: projects = [], isLoading, error } = useProjects()
+
   return (
     <div>
       <div className="flex items-center justify-between mb-8">
@@ -57,6 +61,64 @@ export default function DashboardPage() {
           <p className="text-xs text-muted-foreground">
             -30min from last week
           </p>
+        </div>
+      </div>
+
+      {/* Projects Section */}
+      <div className="rounded-lg border bg-card mb-8">
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold">Projects</h2>
+            <Link
+              href="/dashboard/projects/new"
+              className="text-sm text-blue-600 hover:underline"
+            >
+              View all
+            </Link>
+          </div>
+          {isLoading ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Loading projects...
+            </div>
+          ) : projects.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground mb-4">No projects yet</p>
+              <Link
+                href="/dashboard/projects/new"
+                className="inline-block px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                Create your first project
+              </Link>
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {projects.slice(0, 6).map((project) => (
+                <Link
+                  key={project.id}
+                  href={`/dashboard/projects/${project.id}`}
+                  className="block p-4 border rounded-lg hover:border-blue-500 transition-colors"
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <h3 className="font-semibold">{project.name}</h3>
+                    <span className="text-xs bg-gray-100 px-2 py-1 rounded">
+                      {project.key}
+                    </span>
+                  </div>
+                  {project.description && (
+                    <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+                      {project.description}
+                    </p>
+                  )}
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>{project.members.length} members</span>
+                    <span>
+                      {new Date(project.updated_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

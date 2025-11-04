@@ -1,5 +1,5 @@
 import apiClient from './client'
-import type { Issue } from '@/stores/issueStore'
+import type { Issue } from '@/types'
 
 export interface CreateIssueDTO {
   title: string

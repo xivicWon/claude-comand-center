@@ -2,9 +2,12 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useCreateProject } from '@/hooks/useProjects'
+import { projectsApi } from '@/lib/api/projects'
 
 export default function NewProjectPage() {
   const router = useRouter()
+  const createProject = useCreateProject()
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -40,25 +43,13 @@ export default function NewProjectPage() {
     setIsValidating(true)
 
     try {
-      const token = localStorage.getItem('auth_token')
-      const response = await fetch('http://localhost:8000/api/projects/validate-directory', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ directory: formData.directory }),
-      })
+      const response = await projectsApi.validateDirectory(formData.directory)
 
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error?.message || 'Validation failed')
-      }
-
-      setDirectoryValid(data.data.valid)
-      if (!data.data.valid) {
-        setErrors(prev => ({ ...prev, directory: 'Directory does not exist or is not accessible' }))
+      if (response.success && response.data) {
+        setDirectoryValid(response.data.valid)
+        if (!response.data.valid) {
+          setErrors(prev => ({ ...prev, directory: 'Directory does not exist or is not accessible' }))
+        }
       }
     } catch (error) {
       setDirectoryValid(false)
@@ -100,24 +91,16 @@ export default function NewProjectPage() {
     setIsLoading(true)
 
     try {
-      const token = localStorage.getItem('auth_token')
-      const response = await fetch('http://localhost:8000/api/projects', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(formData),
-      })
+      // React Query Mutation 사용
+      const response = await createProject.mutateAsync(formData)
 
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error?.message || 'Failed to create project')
+      if (response.success && response.data) {
+        // React Query가 자동으로 캐시 업데이트!
+        // Redirect to the new project detail page
+        router.push(`/dashboard/projects/${response.data.id}`)
+      } else {
+        throw new Error('Failed to create project')
       }
-
-      // Redirect to projects list or project detail
-      router.push('/dashboard')
     } catch (error) {
       setErrors({
         submit: error instanceof Error ? error.message : 'Failed to create project',

@@ -1,23 +1,6 @@
 import { create } from 'zustand'
 import { devtools, persist } from 'zustand/middleware'
-
-export interface Issue {
-  id: string
-  code: string
-  title: string
-  description: string
-  type: 'TASK' | 'BUG' | 'FEATURE' | 'HOTFIX' | 'IMPROVEMENT'
-  priority: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'
-  status: 'TODO' | 'IN_PROGRESS' | 'REVIEW' | 'TESTING' | 'DONE' | 'BLOCKED'
-  assignee?: string
-  labels: string[]
-  attachments?: string[]
-  context_files?: string[]
-  acceptance_criteria?: string[]
-  estimated_hours?: number
-  created_at: string
-  updated_at: string
-}
+import { Issue } from '@/types'
 
 interface IssueFilters {
   search?: string
