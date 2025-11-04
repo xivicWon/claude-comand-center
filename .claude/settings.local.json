@@ -13,7 +13,15 @@
       "Bash(xargs kill:*)",
       "Bash(kill:*)",
       "Bash(curl:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run type-check:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(cat:*)",
+      "Bash(sqlite3:*)",
+      "Bash(npx prisma:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []
