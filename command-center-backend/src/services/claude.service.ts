@@ -86,6 +86,64 @@ const simulateExecution = async (executionId: string) => {
     executionId,
     result: execution.result,
   });
+
+  // Auto-move to REVIEW if configured
+  await handleExecutionCompletion(execution);
+};
+
+const handleExecutionCompletion = async (execution: Execution) => {
+  try {
+    // Import services dynamically to avoid circular dependencies
+    const issueService = await import('./issue.service');
+
+    // Get issue
+    const issue = await issueService.getIssueById(execution.issueId);
+    if (!issue) return;
+
+    // Get project settings
+    const project = await issueService.getIssueProject(execution.issueId);
+    if (!project) return;
+
+    const success = execution.status === 'completed';
+
+    // Send Slack notification about completion
+    if (project.slackWebhookUrl) {
+      const slackService = await import('./slack.service');
+      await slackService.notifyClaudeExecutionCompleted(
+        project.slackWebhookUrl,
+        issue,
+        execution,
+        success
+      );
+    }
+
+    // Auto-move to REVIEW if successful and configured
+    if (success && project.autoMoveToReview && issue.status === 'IN_PROGRESS') {
+      console.log(`🔄 Auto-moving issue ${issue.code} to REVIEW`);
+
+      // Update issue status
+      await issueService.updateIssueStatus(execution.issueId, 'REVIEW');
+
+      // Send Slack notification about auto-move
+      if (project.slackWebhookUrl) {
+        const slackService = await import('./slack.service');
+        await slackService.notifyAutoMovedToReview(
+          project.slackWebhookUrl,
+          { ...issue, status: 'REVIEW' }
+        );
+      }
+
+      // Emit socket event
+      io.emit('issue:statusChanged', {
+        issueId: execution.issueId,
+        status: 'REVIEW',
+        oldStatus: 'IN_PROGRESS',
+        autoMoved: true,
+      });
+    }
+  } catch (error) {
+    console.error('Error handling execution completion:', error);
+  }
 };
 
 export const getExecution = async (id: string): Promise<Execution | null> => {

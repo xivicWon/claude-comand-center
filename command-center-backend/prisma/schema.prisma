@@ -37,6 +37,11 @@ model Project {
   gitRepo     String?
   gitBranch   String?  @default("main")
 
+  // Automation settings
+  slackWebhookUrl String? // Slack webhook URL for notifications
+  claudeAutoExecute Boolean @default(false) // Auto-execute Claude on IN_PROGRESS
+  autoMoveToReview Boolean @default(true) // Auto-move to REVIEW after completion
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

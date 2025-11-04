@@ -114,3 +114,15 @@ export const getIssueStats = async () => {
 
   return stats;
 };
+
+export const getIssueProject = async (issueId: string): Promise<any | null> => {
+  // Mock implementation - in real app, fetch from database
+  // This should join Issue -> Project
+  return {
+    id: 'project-1',
+    name: 'Command Center',
+    slackWebhookUrl: process.env.SLACK_WEBHOOK_URL || null,
+    claudeAutoExecute: process.env.CLAUDE_AUTO_EXECUTE === 'true',
+    autoMoveToReview: process.env.AUTO_MOVE_TO_REVIEW !== 'false', // default true
+  };
+};

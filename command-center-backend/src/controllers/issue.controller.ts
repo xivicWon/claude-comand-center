@@ -119,9 +119,60 @@ export const updateIssueStatus = async (
 ) => {
   try {
     const { status } = req.body;
+
+    // Get issue with old status
+    const issueBeforeUpdate = await issueService.getIssueById(req.params.id);
+    if (!issueBeforeUpdate) {
+      return res.status(404).json({
+        success: false,
+        error: { message: 'Issue not found' },
+      });
+    }
+
+    const oldStatus = issueBeforeUpdate.status;
+
+    // Update issue status
     const issue = await issueService.updateIssueStatus(req.params.id, status);
 
-    io.emit('issue:statusChanged', { issueId: req.params.id, status });
+    // Emit socket event
+    io.emit('issue:statusChanged', { issueId: req.params.id, status, oldStatus });
+
+    // Get project settings for automation
+    const project = await issueService.getIssueProject(issue.id);
+
+    if (project) {
+      // Send Slack notification
+      if (project.slackWebhookUrl) {
+        const slackService = await import('../services/slack.service');
+        await slackService.notifyIssueStatusChange(
+          project.slackWebhookUrl,
+          issue,
+          oldStatus,
+          status
+        );
+      }
+
+      // Auto-execute Claude if moved to IN_PROGRESS
+      if (status === 'IN_PROGRESS' && project.claudeAutoExecute) {
+        console.log(`🤖 Auto-executing Claude for issue ${issue.code}`);
+
+        // Start Claude execution in background
+        const execution = await claudeService.executeForIssue(issue, {
+          autoExecuted: true,
+          projectId: project.id,
+        });
+
+        // Notify Slack about execution start
+        if (project.slackWebhookUrl) {
+          const slackService = await import('../services/slack.service');
+          await slackService.notifyClaudeExecutionStarted(
+            project.slackWebhookUrl,
+            issue,
+            execution
+          );
+        }
+      }
+    }
 
     res.json({
       success: true,
